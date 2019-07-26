@@ -224,16 +224,28 @@ func (m *Map) Get(key, valueOut interface{}) (bool, error) {
 	}
 }
 
-// GetBytes gets a value from Map
-func (m *Map) GetBytes(key interface{}) ([]byte, error) {
-	valueBytes := make([]byte, m.fullValueSize)
-	valuePtr := newPtr(unsafe.Pointer(&valueBytes[0]))
+//
+// If valuePtr is pass as argument, data will be written on
+// the user need to pass a buffer large enougth to receive the value size
+func (m *Map) GetBytes(key interface{}, value ...unsafe.Pointer) ([]byte, error) {
+	var valueBytes []byte
+	var valuePtr syscallPtr
+
+	if len(value) > 0 {
+		valuePtr = newPtr(value[0])
+	} else {
+		valueBytes = make([]byte, m.fullValueSize)
+		valuePtr = newPtr(unsafe.Pointer(&valueBytes[0]))
+	}
 
 	err := m.lookup(key, valuePtr)
 	if errors.Cause(err) == unix.ENOENT {
 		return nil, nil
 	}
 
+	if len(value) > 0 {
+		return nil, err
+	}
 	return valueBytes, err
 }
 
